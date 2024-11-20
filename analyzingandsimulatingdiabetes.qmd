@@ -1,0 +1,220 @@
+---
+title: "Analyzing and Simulating Diabetes Dataset"
+author: "William Lorenzo"
+format: 
+  pdf:
+    self-contained: True
+---
+
+## Background
+
+Diabetes is a chronic condition that affects more than a plethora of people worldwide. Managing diabetes involves careful monitoring of blood glucose levels, body mass index (BMI), and other health indicators. The `diabetes.csv` dataset provides valuable data for various health metrics for certain individuals, including glucose levels, blood pressure, skin thickness, insulin level, BMI, and Diabetes Pedigree.
+
+## Primary Objective
+
+Upon conducting the experiment, I intend to analyze and visualize diabetes-related data to identify patterns and trends, and to perform a probability simulation to predict future diabetes outcomes. By achieving this, we aim to gain insights into the health metrics that significantly impact diabetes and to explore how these insights can inform better management and intervention strategies.
+
+## Installation of Necessary Packages and `read.csv`
+
+```{r}
+diabetes_df <- read.csv("diabetes (1).csv")
+
+library(tidyverse)
+```
+
+## Data Cleaning
+
+There are no missing values, good indicator for me to proceed with the analysis.
+
+```{r}
+# Checking for missing values.
+
+total_missing <- sum(is.na(diabetes_df))
+total_missing
+```
+
+## Grouping and Summarizing
+
+The higher average glucose levels and BMI among diabetic patients highlight the importance of monitoring these factors for diabetes management and prevention.
+
+The higher average Diabetes Pedigree Function among diabetes patients indicates a possible genetic influence on the likelihood of developing diabetes.
+
+The older average age of diabetic patients suggests that age that could be a contributing factor to the onset of diabetes.
+
+- Diabetic patients tend to have a higher average number of pregnancies compared to non-diabetic patients
+
+- Diabetic patients have significantly higher average glucose levels, which is expected as high glucose levels are a key indicator of diabetes
+
+- Blood pressure is slightly higher on average for diabetic patients when under the comparison to non-diabetic patients
+
+- Diabetic patients tend to have slightly higher skin thickness measurements on average
+
+- Diabetic patients have higher average insulin levels, which could be due to the body's reduced ability to manage blood sugar
+
+- Diabetic patients have a higher average BMI, indicating a higher prevalence of overweight and obesity among them
+
+- Diabetic patients tend to have a higher DPF value, suggesting a greater genetic predisposition
+
+- Diabetic patients are, on average, older than non-diabetic individuals
+
+```{r}
+df_grouped <- diabetes_df  |>
+  group_by(Outcome) |>
+  summarize(
+    count = n(),
+    avg_pregnancies = mean(Pregnancies, na.rm = T),
+    avg_glucose = mean(Glucose, na.rm = T),
+    avg_bp = mean(BloodPressure, na.rm = T),
+    avg_skinthickness = mean(SkinThickness, na.rm = T),
+    avg_insulin = mean(Insulin, na.rm = T),
+    avg_bmi = mean(BMI, na.rm = T),
+    avg_dpf = mean(DiabetesPedigreeFunction, na.rm = T),
+    avg_age = mean(Age, na.rm = T)
+  )
+df_grouped
+```
+
+## Average Glucose Levels by Age Group
+
+The average glucose levels are generally higher in older age groups, peaking around the `50-60` age range. As the age groups progress, the number of observations tends to decrease.
+
+```{r}
+# Creation of age groups
+
+age_group_function <- function(age) {
+  if (age < 20) {
+    return('Under 20')
+  } else if (age >= 20 & age < 30) {
+    return('20-30')
+  } else if (age >= 30 & age < 40) {
+    return('30-40')
+  } else if (age >= 40 & age < 50) {
+    return('40-50')
+  } else if (age >= 50 & age < 60) {
+    return('50-60')
+  } else if (age >= 60 & age < 70) {
+    return('60-70')
+  } else if (age >= 70 & age < 80) {
+    return('70-80')
+  } else if (age >= 80 & age < 90) {
+    return('80-90')
+  } else {
+    return(NA)
+  }
+}
+
+diabetes_df <- diabetes_df |>
+  mutate(age_groups = sapply(Age, age_group_function))
+
+# Calculation of Average Glucose Levels
+
+age_group_summary <- diabetes_df |>
+  group_by(age_groups) |>
+  summarize(
+    count = n(),
+    average_glucose = mean(Glucose)
+  )
+
+
+```
+
+```{r}
+# Visualizing Average Glucose Levels by Age Group
+
+ggplot(data = age_group_summary, aes(x = age_groups, y = average_glucose, fill = age_groups)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Average Glucose Levels by Age Group",
+       x = "Age Group",
+       y = "Average Glucose Level",
+       color = "Age Groups")
+```
+
+## Visualizing the Relationship between BMI and Glucose Levels
+
+Individuals with higher glucose levels (above 150) often have a higher BMI. There is a noticeable clustering of blue dots (diabetic outcome) at higher glucose levels and higher BMI values.
+
+Non-diabetic individuals (red dots) have the tendency to be more densely populated in the lower glucose levels and lower BMI range. Diabetic individuals (blue dots) are more frequently found in the higher glucose and BMI ranges.
+
+
+Upon examination, this suggests a potential correlation between higher glucose levels and higher BMI with the likelihood of diabetes. As glucose and BMI increase, the likelihood of being diabetic also appears to increase.
+
+
+```{r}
+# BMI vs. Glucose Levels using scatter plot
+
+ggplot(data = diabetes_df, aes(x = Glucose, y = BMI, color = factor(Outcome))) +
+  geom_point() +
+  labs(title = "Glucose Levels vs. BMI",
+       x = "Glucose",
+       y = "BMI",
+       color = "Outcome")
+```
+
+## Visual Representation of BMI by Outcome
+
+The higher median BMI in the diabetic group indicates that on average, individuals with diabetes tend to have higher BMI values compared to non-diabetic. This supports the well-established link between higher BMI (overweight/obesity) and the risk of developing diabetes.
+
+The presence of outliers in both groups, especially among diabetics, highlights that there are individuals with BMI values that are significantly different from the majority. This can indicate the importance of considering individual variations when assessing diabetes risk based on BMI alone.
+
+- The median BMI is higher for individuals with a diabetic outcome, compared to those without.
+
+- The interquartile range (range between the first quartile and third quartile), is wider for diabetic patients, indicating further variability in BMI values among the diabetic group.
+
+- Both groups have outliers, but there seem to be more extreme outliers in the diabetic group, suggesting that while there is a higher central tendency for BMI in diabetics, some individuals have much higher or lower BMIs than the typical range.
+
+```{r}
+ggplot(data = diabetes_df, aes(x = factor(Outcome), y = BMI)) +
+  geom_boxplot(col = "black", fill = "lightgrey") +
+  labs(title = "BMI by Outcome",
+       x = "Outcome",
+       y = "BMI")
+```
+
+## Probability Simulation
+
+#### Simulating future diabetes status on current data
+
+Simulation was executed with a binomial distribution based on the current diabetes rate. By running the simulation, I was able to get an estimated proportion of future diabetes cases. 
+
+```{r}
+# Simulating Diabetes Status
+
+set.seed(123)
+simulation <- rbinom(n = 1000, size = 1, prob = mean(diabetes_df$Outcome == 1, na.rm = T))
+
+# Proportion of simulated diabetes status
+
+simulated_diabetes_rate <- mean(simulation)
+
+```
+
+```{r}
+# Visualizing the simulation results
+
+sim_data <- data.frame(simulation = simulation)
+
+ggplot(data = sim_data, aes(x = simulation)) +
+  geom_bar(fill = "lightblue", col = "black") +
+  labs(title = "Simulation of Future Diabetes Status",
+       x = "Diabetes Status",
+       y = "Count")
+```
+
+## Interpretation and Reporting
+
+Upon executing the simulation, I successfully modeled future diabetes outcomes based on the dataset utilized.
+
+The simulation generated a series of 1s and 0s, where 1 indicates the presence of diabetes and 0 indicates no diabetes.
+
+#### Key Findings
+
+- Total Simulations: 1000 (1k individuals)
+- Simulated Diabetes Rate: Approximately 34.7% of the simulated individuals were predicted to have diabetes (indicated by the `simulated_diabetes_rate` of 0.347)
+
+#### Implications
+
+- The simulated diabetes rate (34.7%) is an estimate based on the current prevalence rate in the dataset.
+
+- This simulation provides a predictive glimpse into the potential future distribution of diabetes within a similar population
+
+- As for healthcare planning, understanding the projected diabetes rates can help in planning healthcare resources, interventions, and preventive measures
